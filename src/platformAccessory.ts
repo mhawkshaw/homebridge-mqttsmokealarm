@@ -1,16 +1,16 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
-import { MqttSmokeAlarmPlatform as MqttSmokeAlarmPlatform } from './platform';
+import { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform';
 
 import { Client, connect } from 'mqtt';
 
 /**
- * MQTT Smoke Alarm Accessory
+ * MQTT Smoke Sensor Accessory
  * An instance of this class is created for each accessory registered (in this case only one)
  * The MQTT Smoke Detector accessory exposes the services of smoke detected, battery low and if tampered with
  */
-export class MqttSmokeAlarmSensor {
-  private smokeAlarmService: Service;
+export class MqttSmokeSensorSensor {
+  private smokeSensorService: Service;
 
   private smokeDetectedTopic = '';
   private smokeDetectedPayload = '';
@@ -81,7 +81,7 @@ export class MqttSmokeAlarmSensor {
   }
 
   constructor(
-    private readonly platform: MqttSmokeAlarmPlatform,
+    private readonly platform: MqttSmokeSensorPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly displayName: string,
     private readonly manufacturer: string,
@@ -139,20 +139,20 @@ export class MqttSmokeAlarmSensor {
         .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
     }
 
-    this.smokeAlarmService = this.accessory.getService(this.platform.Service.SmokeSensor) ||
+    this.smokeSensorService = this.accessory.getService(this.platform.Service.SmokeSensor) ||
       this.accessory.addService(this.platform.Service.SmokeSensor);
 
     // set the service name, this is what is displayed as the default name on the Home app
-    this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.Name, displayName);
+    this.smokeSensorService.setCharacteristic(this.platform.Characteristic.Name, displayName);
 
     // register handlers
-    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.SmokeDetected)
+    this.smokeSensorService.getCharacteristic(this.platform.Characteristic.SmokeDetected)
       .onGet(this.handleSmokeDetectedGet.bind(this));
-    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusLowBattery)
+    this.smokeSensorService.getCharacteristic(this.platform.Characteristic.StatusLowBattery)
       .onGet(this.handleLowBatteryGet.bind(this));
-    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusTampered)
+    this.smokeSensorService.getCharacteristic(this.platform.Characteristic.StatusTampered)
       .onGet(this.handleTamperedGet.bind(this));
-    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusFault)
+    this.smokeSensorService.getCharacteristic(this.platform.Characteristic.StatusFault)
       .onGet(this.handleFaultGet.bind(this));
 
     // Connect to MQTT broker
@@ -177,29 +177,29 @@ export class MqttSmokeAlarmSensor {
 
       if (topic === this.smokeDetectedTopic && (message.toString() === this.smokeDetectedPayload) || !this.smokeDetectedPayload) {
         this.sensorData.smokeDetected = this.platform.Characteristic.SmokeDetected.SMOKE_DETECTED;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
       } else if (topic === this.smokeNotDetectedTopic && (message.toString() === this.smokeNotDetectedPayload) ||
                   !this.smokeNotDetectedPayload) {
         this.sensorData.smokeDetected = this.platform.Characteristic.SmokeDetected.SMOKE_NOT_DETECTED;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
       } else if (topic === this.batteryLowTopic && (message.toString() === this.lowBatteryPayload) || !this.lowBatteryPayload) {
         this.sensorData.batteryLow = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
       } else if (topic === this.batteryNormalTopic && (message.toString() === this.normalBatteryPayload) || !this.normalBatteryPayload) {
         this.sensorData.batteryLow = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
       } else if (topic === this.tamperedTopic && (message.toString() === this.tamperedPayload) || !this.tamperedPayload) {
         this.sensorData.tampered = this.platform.Characteristic.StatusTampered.TAMPERED;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
       } else if (topic === this.notTamperedTopic && (message.toString() === this.notTamperedPayload) || !this.notTamperedPayload) {
         this.sensorData.tampered = this.platform.Characteristic.StatusTampered.NOT_TAMPERED;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
       } else if (topic === this.faultTopic && (message.toString() === this.faultPayload) || !this.faultPayload) {
         this.sensorData.fault = this.platform.Characteristic.StatusFault.GENERAL_FAULT;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
       } else if (topic === this.noFaultTopic && (message.toString() === this.noFaultPayload) || !this.noFaultPayload) {
         this.sensorData.fault = this.platform.Characteristic.StatusFault.NO_FAULT;
-        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
+        this.smokeSensorService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
       }
     });
 

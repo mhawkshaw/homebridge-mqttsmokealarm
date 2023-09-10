@@ -6,9 +6,9 @@
 </p>
 
 
-# MQTT Smoke Alarm Homebridge Plug-in
+# MQTT Smoke Sensor Homebridge Plug-in
 
-This Homebridge plug-in allows you to connect to smoke alarms that can communicate over MQTT. For example, your smoke alarm might communicate over Zigbee or Z-Wave via a USB Stick connected to your Home Asistant installation. You could then have Home Assistant send the status updates over MQTT using an automation.
+This Homebridge plug-in allows you to connect to smoke sensors that can communicate over MQTT. For example, your smoke sensor might communicate over Zigbee or Z-Wave via a USB Stick connected to your Home Asistant installation. You could then have Home Assistant send the status updates over MQTT using an automation.
 
 ## Setup MQTT broker
 
@@ -45,7 +45,7 @@ Follow the [homebridge installation instructions](https://www.npmjs.com/package/
 
 Install this plugin globally:
 
-    npm install -g homebridge-mqttsmokealarm
+    npm install -g homebridge-MqttSmokeSensor
 
 Add platform to `config.json`, for configuration see below.
 
@@ -57,14 +57,14 @@ The plug-in needs to know where to find the MQTT broker providing the JSON data 
 {
   "platforms": [
     {
-      "platform": "MqttSmokeAlarm",
-      "name": "MqttSmokeAlarm",
+      "platform": "MqttSmokeSensor",
+      "name": "MqttSmokeSensor",
       "mqttbroker": "mqtt://127.0.0.1:1883",
       "username": "",
       "password": "",
       "devices": [
         {
-          "displayName": "My Kitchen Smoke Alarm",
+          "displayName": "My Kitchen Smoke Sensor",
           "serial": "1234567890",
           "manufacturer": "Fibaro",
           "model": "smoke",
@@ -109,4 +109,4 @@ The following settings are optional:
 - `faultPayload`: the payload of the MQTT message received on the topic. If not specified, assumes device is faulty
 - `noFaultPayload`: the payload of the MQTT message received on the topic. If not specified, assumes device is faulty
 
-If you have multiple smoke alarms, then you can list them all in the config giving each one a unique name, MQTT topic and serial number.
+If you have multiple smoke sensors, then you can list them all in the config giving each one a unique name, MQTT topic and serial number.

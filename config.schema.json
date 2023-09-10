@@ -1,15 +1,15 @@
 {
-  "pluginAlias": "MqttSmokeAlarm",
+  "pluginAlias": "MqttSmokeSensor",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Get information from Smoke Alarms that communicate over MQTT",
+  "headerDisplay": "Get information from Smoke Sensors that communicate over MQTT",
   "schema": {
     "type": "object",
     "properties": {
       "name": {
         "type": "string",
         "title": "Plugin name as shown in Homebridge Log",
-        "default": "MqttSmokeAlarm"
+        "default": "MqttSmokeSensor"
       },
       "mqttbroker": {
         "title": "MQTT Broker",
@@ -31,7 +31,7 @@
         "default": ""
       },
       "devices": {
-        "title": "Smoke Alarm Devices",
+        "title": "Smoke Sensor Devices",
         "type": "array",
         "uniqueItems": true,
         "required": true,
@@ -41,25 +41,25 @@
           "required": true,
           "properties": {
             "displayName": {
-              "title": "Smoke Alarm Name",
+              "title": "Smoke Sensor Name",
               "type": "string",
               "required": true,
-              "default": "Smoke Alarm"
+              "default": "Smoke Sensor"
             },
             "manufacturer": {
-              "title": "Smoke Alarm Manufacturer",
+              "title": "Smoke Sensor Manufacturer",
               "type": "string",
               "required": true,
               "default": "MQTT"
             },
             "model": {
-              "title": "Smoke Alarm Model",
+              "title": "Smoke Sensor Model",
               "type": "string",
               "required": true,
-              "default": "Smoke Alarm"
+              "default": "Smoke Sensor"
             },
             "serial": {
-              "title": "Smoke Alarm Serial Number",
+              "title": "Smoke Sensor Serial Number",
               "type": "string",
               "required": true,
              "default": "1234567890"
@@ -97,7 +97,7 @@
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/getsmokedetected",
-              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+              "comment": "Used to get the status proactively from the smoke sensor. Response should be sent on the topic above."
             },
             "lowBatteryTopic": {
               "title": "Low Battery Topic Name",
@@ -132,7 +132,7 @@
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/getbatterylow",
-              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+              "comment": "Used to get the status proactively from the smoke sensor. Response should be sent on the topic above."
             },
             "tamperedTopic": {
               "title": "Smoke Detector Tampered Topic Name",
@@ -146,28 +146,28 @@
               "type": "string",
               "required": false,
               "default": "1",
-              "comment": "Optional. If a message is received on the topic then it is assumed alarm has been tampered with."
+              "comment": "Optional. If a message is received on the topic then it is assumed sensor has been tampered with."
             },
             "notTamperedTopic": {
               "title": "Smoke Detector Not Tampered Topic Name",
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/tampered",
-              "comment": "If this is the same as the tampered topic, then the payload needs to indicate if the alarm has been tampered with or not."
+              "comment": "If this is the same as the tampered topic, then the payload needs to indicate if the sensor has been tampered with or not."
             },
             "notTamperedPayload": {
               "title": "Smoke Detector Not Tampered Payload",
               "type": "string",
               "required": false,
               "default": "0",
-              "comment": "Optional. If a message is received on the topic then it is assumed alarm has been tampered with."
+              "comment": "Optional. If a message is received on the topic then it is assumed sensor has been tampered with."
             },
             "getTamperedTopic": {
               "title": "Get Tampered Topic Name",
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/gettampered",
-              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+              "comment": "Used to get the status proactively from the smoke sensor. Response should be sent on the topic above."
             },
             "faultTopic": {
               "title": "Smoke Detector Fault Topic Name",
@@ -181,28 +181,28 @@
               "type": "string",
               "required": false,
               "default": "1",
-              "comment": "Optional. If a message is received on the topic then it is assumed alarm has a fault."
+              "comment": "Optional. If a message is received on the topic then it is assumed sensor has a fault."
             },
             "noFaultTopic": {
               "title": "Smoke Detector No Fault Topic Name",
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/fault",
-              "comment": "If this is the same as the fault topic, then the payload needs to indicate if the alarm has a fault or not."
+              "comment": "If this is the same as the fault topic, then the payload needs to indicate if the sensor has a fault or not."
             },
             "noFaultPayload": {
               "title": "Smoke Detector No Fault Payload",
               "type": "string",
               "required": false,
               "default": "0",
-              "comment": "Optional. If a message is received on the topic then it is assumed alarm has a fault."
+              "comment": "Optional. If a message is received on the topic then it is assumed sensor has a fault."
             },
             "getFaultTopic": {
               "title": "Get Fault Topic Name",
               "type": "string",
               "required": true,
               "default": "ha/smokedetector/getfault",
-              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+              "comment": "Used to get the status proactively from the smoke sensor. Response should be sent on the topic above."
             }
           }
         }
