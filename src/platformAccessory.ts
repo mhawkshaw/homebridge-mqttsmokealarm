@@ -1,127 +1,159 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
-import { EnviroplusPlatform } from './platform';
+import { MqttSmokeAlarmPlatform as MqttSmokeAlarmPlatform } from './platform';
 
 import { Client, connect } from 'mqtt';
 
-interface EnviroPlusJson {
-  temperature: number;
-  pressure: number;
-  humidity: number;
-  oxidised: number;
-  reduced: number;
-  nh3: number;
-  lux: number;
-  pm1: number;
-  pm25: number;
-  pm10: number;
-  serial: string;
-}
-
 /**
- * Enviroplus Accessory
+ * MQTT Smoke Alarm Accessory
  * An instance of this class is created for each accessory registered (in this case only one)
- * The Enviroplus accessory exposes the services of temperature, air quality and humidity
+ * The MQTT Smoke Detector accessory exposes the services of smoke detected, battery low and if tampered with
  */
-export class EnviroplusSensor {
-  private airQualityService: Service;
-  private humidityService: Service;
-  private temperatureService: Service;
-  private lightSensorService: Service;
+export class MqttSmokeAlarmSensor {
+  private smokeAlarmService: Service;
 
-  private mqttTopic = '';
+  private smokeDetectedTopic = '';
+  private smokeDetectedPayload = '';
+  private smokeNotDetectedTopic = '';
+  private smokeNotDetectedPayload = '';
+  private getSmokeDetectedTopic = '';
+  private batteryLowTopic = '';
+  private lowBatteryPayload = '';
+  private batteryNormalTopic = '';
+  private normalBatteryPayload = '';
+  private getLowBatteryTopic = '';
+  private tamperedTopic = '';
+  private tamperedPayload = '';
+  private notTamperedTopic = '';
+  private notTamperedPayload = '';
+  private getTamperedTopic = '';
+  private faultTopic = '';
+  private faultPayload = '';
+  private noFaultTopic = '';
+  private noFaultPayload = '';
+  private getFaultTopic = '';
 
   // Use to store the sensor data for quick retrieval
   private sensorData = {
-    airQuality: this.platform.Characteristic.AirQuality.UNKNOWN,
-    temperature: -270,
-    humidity: 0,
-    lux: 0.0001,
-    P2: 0,
-    P1: 0,
+    smokeDetected: this.platform.Characteristic.SmokeDetected.SMOKE_NOT_DETECTED,
+    batteryLow: this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
+    tampered: this.platform.Characteristic.StatusTampered.NOT_TAMPERED,
+    fault: this.platform.Characteristic.StatusFault.NO_FAULT,
   };
 
   private mqttClient: Client;
 
-  /**
-   * Maps the JSON data received from the MQTT broker originating from the Enviro sensor to the internal structure we need
-   * @param jsonData the JSON data received from the MQTT broker
-   */
-  mapJsonData(jsonData: EnviroPlusJson): void {
-    this.sensorData.P1 = jsonData.pm1;
-    this.sensorData.P2 = jsonData.pm25;
-    this.sensorData.humidity = jsonData.humidity;
-    this.sensorData.temperature = jsonData.temperature;
-    this.sensorData.lux = jsonData.lux;
-    if (jsonData.lux <= 0) {
-      this.sensorData.lux = 0.0001;
+  // Subscribes to the specified MQTT topic
+  private subscribeMqttTopic(topicName: string) {
+    this.platform.log.debug('Subscribing to topic ->', topicName);
+    if (this.mqttClient) {
+      this.mqttClient.subscribe(topicName, { qos: 0 }, (error, granted) => {
+        if (error) {
+          this.platform.log.error('Unable to connect to the MQTT broker: ' + error.name + ' ' + error.message);
+        } else {
+          // If we're re-connecting then the existing topic subscription should still be persisted.
+          if (granted.length > 0) {
+            this.platform.log.debug(granted[0].topic + ' was subscribed');
+          }
+        }
+      });
     }
+  }
 
-    if (this.sensorData.P2 <= this.platform.config.excellent) {
-      this.sensorData.airQuality = this.platform.Characteristic.AirQuality.EXCELLENT;
-    } else if (this.sensorData.P2 > this.platform.config.excellent && this.sensorData.P2 <= this.platform.config.good) {
-      this.sensorData.airQuality = this.platform.Characteristic.AirQuality.GOOD;
-    } else if (this.sensorData.P2 > this.platform.config.good && this.sensorData.P2 <= this.platform.config.fair) {
-      this.sensorData.airQuality = this.platform.Characteristic.AirQuality.FAIR;
-    } else if (this.sensorData.P2 > this.platform.config.fair && this.sensorData.P2 <= this.platform.config.inferior) {
-      this.sensorData.airQuality = this.platform.Characteristic.AirQuality.INFERIOR;
-    } else if (this.sensorData.P2 > this.platform.config.poor) {
-      this.sensorData.airQuality = this.platform.Characteristic.AirQuality.POOR;
+  // Send a message to the specified MQTT topic. Payload will be empty.
+  private sendMqttMsg(topicName: string) {
+    if (this.mqttClient) {
+      this.mqttClient.publish(topicName, '');
     }
   }
 
   shutdown() {
     this.platform.log.debug('Shutdown called. Unsubscribing from MQTT broker.');
-    this.mqttClient.unsubscribe(this.mqttTopic);
+    this.mqttClient.unsubscribe(this.smokeDetectedTopic);
+    this.mqttClient.unsubscribe(this.smokeNotDetectedTopic);
+    this.mqttClient.unsubscribe(this.batteryLowTopic);
+    this.mqttClient.unsubscribe(this.batteryNormalTopic);
+    this.mqttClient.unsubscribe(this.tamperedTopic);
+    this.mqttClient.unsubscribe(this.notTamperedTopic);
+    this.mqttClient.unsubscribe(this.faultTopic);
+    this.mqttClient.unsubscribe(this.noFaultTopic);
     this.mqttClient.end();
   }
 
   constructor(
-    private readonly platform: EnviroplusPlatform,
+    private readonly platform: MqttSmokeAlarmPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly displayName: string,
+    private readonly manufacturer: string,
+    private readonly model: string,
     private readonly serial: string,
-    private readonly topic: string,
+    private readonly smokeDetected: string,
+    private readonly smokeDetectedMsgPayload: string,
+    private readonly smokeNotDetected: string,
+    private readonly smokeNotDetectedMsgPayload: string,
+    private readonly getSmokeDetected: string,
+    private readonly batteryLow: string,
+    private readonly lowBatteryMsgPayload: string,
+    private readonly normalBattery: string,
+    private readonly normalBatteryMsgPayload: string,
+    private readonly getLowBattery: string,
+    private readonly tampered: string,
+    private readonly tamperedMsgPayload: string,
+    private readonly notTampered: string,
+    private readonly notTamperedMsgPayload: string,
+    private readonly getTampered: string,
+    private readonly fault: string,
+    private readonly faultMsgPayload: string,
+    private readonly noFault: string,
+    private readonly noFaultMsgPayload: string,
+    private readonly getFault: string,
+
   ) {
-    this.mqttTopic = topic;
+    this.smokeDetectedTopic = smokeDetected;
+    this.smokeDetectedPayload = smokeDetectedMsgPayload;
+    this.smokeNotDetectedTopic = smokeNotDetected;
+    this.smokeNotDetectedPayload = smokeNotDetectedMsgPayload;
+    this.getSmokeDetectedTopic = getSmokeDetected;
+    this.batteryLowTopic = batteryLow;
+    this.lowBatteryPayload = lowBatteryMsgPayload;
+    this.batteryNormalTopic = normalBattery;
+    this.normalBatteryPayload = normalBatteryMsgPayload;
+    this.getLowBatteryTopic = getLowBattery;
+    this.tamperedTopic = tampered;
+    this.tamperedPayload = tamperedMsgPayload;
+    this.notTamperedTopic = notTampered;
+    this.notTamperedPayload = notTamperedMsgPayload;
+    this.getTamperedTopic = getTampered;
+    this.faultTopic = fault;
+    this.faultPayload = faultMsgPayload;
+    this.noFaultTopic = noFault;
+    this.noFaultPayload = noFaultMsgPayload;
+    this.getFaultTopic = getFault;
 
     // set accessory information
     const accessoryInfo: Service | undefined = this.accessory.getService(this.platform.Service.AccessoryInformation);
 
     if (accessoryInfo !== undefined) {
-      accessoryInfo.setCharacteristic(this.platform.Characteristic.Manufacturer, 'Pimoroni')
-        .setCharacteristic(this.platform.Characteristic.Model, 'EnviroPlus')
+      accessoryInfo.setCharacteristic(this.platform.Characteristic.Manufacturer, manufacturer)
+        .setCharacteristic(this.platform.Characteristic.Model, model)
         .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
     }
 
-    this.airQualityService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
-      this.accessory.addService(this.platform.Service.AirQualitySensor);
-    this.temperatureService = this.accessory.getService(this.platform.Service.TemperatureSensor) ||
-      this.accessory.addService(this.platform.Service.TemperatureSensor);
-    this.humidityService = this.accessory.getService(this.platform.Service.HumiditySensor) ||
-      this.accessory.addService(this.platform.Service.HumiditySensor);
-    this.lightSensorService = this.accessory.getService(this.platform.Service.LightSensor) ||
-      this.accessory.addService(this.platform.Service.LightSensor);
+    this.smokeAlarmService = this.accessory.getService(this.platform.Service.SmokeSensor) ||
+      this.accessory.addService(this.platform.Service.SmokeSensor);
 
     // set the service name, this is what is displayed as the default name on the Home app
-    this.airQualityService.setCharacteristic(this.platform.Characteristic.Name, 'Air Quality');
-    this.temperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Temperature');
-    this.humidityService.setCharacteristic(this.platform.Characteristic.Name, 'Humidity');
-    this.lightSensorService.setCharacteristic(this.platform.Characteristic.Name, 'Light Level');
+    this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.Name, displayName);
 
     // register handlers
-    this.airQualityService.getCharacteristic(this.platform.Characteristic.AirQuality)
-      .onGet(this.handleAirQualityGet.bind(this));
-    this.airQualityService.getCharacteristic(this.platform.Characteristic.PM10Density)
-      .onGet(this.handlePM10DensityGet.bind(this));
-    this.airQualityService.getCharacteristic(this.platform.Characteristic.PM2_5Density)
-      .onGet(this.handlePM2_5DensityGet.bind(this));
-    this.temperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
-      .onGet(this.handleTemperatureGet.bind(this));
-    this.humidityService.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
-      .onGet(this.handleHumidityGet.bind(this));
-    this.lightSensorService.getCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel)
-      .onGet(this.handleLightSensorGet.bind(this));
+    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.SmokeDetected)
+      .onGet(this.handleSmokeDetectedGet.bind(this));
+    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusLowBattery)
+      .onGet(this.handleLowBatteryGet.bind(this));
+    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusTampered)
+      .onGet(this.handleTamperedGet.bind(this));
+    this.smokeAlarmService.getCharacteristic(this.platform.Characteristic.StatusFault)
+      .onGet(this.handleFaultGet.bind(this));
 
     // Connect to MQTT broker
     const options = {
@@ -140,24 +172,48 @@ export class EnviroplusSensor {
     this.mqttClient = connect(brokerUrl, options);
 
     this.mqttClient.on('message', (topic, message) => {
-      this.platform.log.debug(message.toString('utf-8'));
-      const enviroPlusData: EnviroPlusJson = JSON.parse(message.toString('utf-8'));
-      this.mapJsonData(enviroPlusData);
+      this.platform.log.debug('MQTT topic: ', topic);
+      this.platform.log.debug('MQTT message received: ', message.toString('utf-8'));
+
+      if (topic === this.smokeDetectedTopic && (message.toString() === this.smokeDetectedPayload) || !this.smokeDetectedPayload) {
+        this.sensorData.smokeDetected = this.platform.Characteristic.SmokeDetected.SMOKE_DETECTED;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
+      } else if (topic === this.smokeNotDetectedTopic && (message.toString() === this.smokeNotDetectedPayload) ||
+                  !this.smokeNotDetectedPayload) {
+        this.sensorData.smokeDetected = this.platform.Characteristic.SmokeDetected.SMOKE_NOT_DETECTED;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.SmokeDetected, this.sensorData.smokeDetected);
+      } else if (topic === this.batteryLowTopic && (message.toString() === this.lowBatteryPayload) || !this.lowBatteryPayload) {
+        this.sensorData.batteryLow = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
+      } else if (topic === this.batteryNormalTopic && (message.toString() === this.normalBatteryPayload) || !this.normalBatteryPayload) {
+        this.sensorData.batteryLow = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusLowBattery, this.sensorData.batteryLow);
+      } else if (topic === this.tamperedTopic && (message.toString() === this.tamperedPayload) || !this.tamperedPayload) {
+        this.sensorData.tampered = this.platform.Characteristic.StatusTampered.TAMPERED;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
+      } else if (topic === this.notTamperedTopic && (message.toString() === this.notTamperedPayload) || !this.notTamperedPayload) {
+        this.sensorData.tampered = this.platform.Characteristic.StatusTampered.NOT_TAMPERED;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusTampered, this.sensorData.tampered);
+      } else if (topic === this.faultTopic && (message.toString() === this.faultPayload) || !this.faultPayload) {
+        this.sensorData.fault = this.platform.Characteristic.StatusFault.GENERAL_FAULT;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
+      } else if (topic === this.noFaultTopic && (message.toString() === this.noFaultPayload) || !this.noFaultPayload) {
+        this.sensorData.fault = this.platform.Characteristic.StatusFault.NO_FAULT;
+        this.smokeAlarmService.setCharacteristic(this.platform.Characteristic.StatusFault, this.sensorData.fault);
+      }
     });
 
     this.mqttClient.on('connect', () => {
       this.platform.log.info('Connected to MQTT broker');
 
-      this.mqttClient.subscribe(this.mqttTopic, { qos: 0 }, (error, granted) => {
-        if (error) {
-          this.platform.log.error('Unable to connect to the MQTT broker: ' + error.name + ' ' + error.message);
-        } else {
-          // If we're re-connecting then the existing topic subscription should still be persisted.
-          if (granted.length > 0) {
-            this.platform.log.debug(granted[0].topic + ' was subscribed');
-          }
-        }
-      });
+      this.subscribeMqttTopic(this.smokeDetectedTopic);
+      this.subscribeMqttTopic(this.smokeNotDetectedTopic);
+      this.subscribeMqttTopic(this.batteryLowTopic);
+      this.subscribeMqttTopic(this.batteryNormalTopic);
+      this.subscribeMqttTopic(this.tamperedTopic);
+      this.subscribeMqttTopic(this.notTamperedTopic);
+      this.subscribeMqttTopic(this.faultTopic);
+      this.subscribeMqttTopic(this.noFaultTopic);
     });
 
     this.mqttClient.on('disconnect', () => {
@@ -173,39 +229,31 @@ export class EnviroplusSensor {
    * Handle the "GET" requests from HomeKit
    * Here we use the locally stored data for performance reasons and also to avoid sending too many requests to the Enviro+ server
    */
-  async handleAirQualityGet(): Promise<number> {
-    this.platform.log.debug('Air Quality ->', this.sensorData.airQuality);
+  async handleSmokeDetectedGet(): Promise<number> {
+    this.platform.log.debug('Smoke Detected ->', this.sensorData.smokeDetected);
+    this.sendMqttMsg(this.getSmokeDetectedTopic);
 
-    return this.sensorData.airQuality;
+    return this.sensorData.smokeDetected;
   }
 
-  async handlePM10DensityGet(): Promise<number> {
-    this.platform.log.debug('PM10 Density ->', this.sensorData.P1);
+  async handleLowBatteryGet(): Promise<number> {
+    this.platform.log.debug('Low Battery ->', this.sensorData.batteryLow);
+    this.sendMqttMsg(this.getLowBatteryTopic);
 
-    return this.sensorData.P1;
+    return this.sensorData.batteryLow;
   }
 
-  async handlePM2_5DensityGet(): Promise<number> {
-    this.platform.log.debug('PM2.5 Density ->', this.sensorData.P2);
+  async handleTamperedGet(): Promise<number> {
+    this.platform.log.debug('Tampered ->', this.sensorData.tampered);
+    this.sendMqttMsg(this.getTamperedTopic);
 
-    return this.sensorData.P2;
+    return this.sensorData.tampered;
   }
 
-  async handleTemperatureGet(): Promise<number> {
-    this.platform.log.debug('Temperature ->', this.sensorData.temperature);
+  async handleFaultGet(): Promise<number> {
+    this.platform.log.debug('Fault ->', this.sensorData.fault);
+    this.sendMqttMsg(this.getFaultTopic);
 
-    return this.sensorData.temperature;
-  }
-
-  async handleHumidityGet(): Promise<number> {
-    this.platform.log.debug('Humidity ->', this.sensorData.humidity);
-
-    return this.sensorData.humidity;
-  }
-
-  async handleLightSensorGet(): Promise<number> {
-    this.platform.log.debug('Light ->', this.sensorData.lux);
-
-    return this.sensorData.lux;
+    return this.sensorData.fault;
   }
 }

@@ -1,15 +1,15 @@
 {
-  "pluginAlias": "EnviroplusAirQuality",
+  "pluginAlias": "MqttSmokeAlarm",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "The Pimoroni Enviro+ Sensor for the Raspberry Pi provides environmental data.",
+  "headerDisplay": "Get information from Smoke Alarms that communicate over MQTT",
   "schema": {
     "type": "object",
     "properties": {
       "name": {
         "type": "string",
         "title": "Plugin name as shown in Homebridge Log",
-        "default": "EnviroPlus"
+        "default": "MqttSmokeAlarm"
       },
       "mqttbroker": {
         "title": "MQTT Broker",
@@ -31,7 +31,7 @@
         "default": ""
       },
       "devices": {
-        "title": "Enviro+ Devices",
+        "title": "Smoke Alarm Devices",
         "type": "array",
         "uniqueItems": true,
         "required": true,
@@ -41,66 +41,171 @@
           "required": true,
           "properties": {
             "displayName": {
-              "title": "Enviro+ Display Name",
+              "title": "Smoke Alarm Name",
               "type": "string",
               "required": true,
-              "default": ""
+              "default": "Smoke Alarm"
+            },
+            "manufacturer": {
+              "title": "Smoke Alarm Manufacturer",
+              "type": "string",
+              "required": true,
+              "default": "MQTT"
+            },
+            "model": {
+              "title": "Smoke Alarm Model",
+              "type": "string",
+              "required": true,
+              "default": "Smoke Alarm"
             },
             "serial": {
-              "title": "Enviro+ Serial Number",
+              "title": "Smoke Alarm Serial Number",
               "type": "string",
               "required": true,
              "default": "1234567890"
             },
-            "topic": {
-              "title": "MQTT Topic",
+            "smokeDetectedTopic": {
+              "title": "Smoke Detected Topic Name",
               "type": "string",
               "required": true,
-              "format": "string",
-              "default": "enviro"
+              "default": "ha/smokedetector/smokedetected",
+              "comment": "The topic needs to be unique to this device."
+            },
+            "smokeDetectedPayload": {
+              "title": "Smoke Detected Payload",
+              "type": "string",
+              "required": false,
+              "default": "1",
+              "comment": "Optional. If a message is received on the topic then it is assumed smoke is detected."
+            },
+            "smokeNotDetectedTopic": {
+              "title": "Smoke Not Detected Topic Name.",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/smokedetected",
+              "comment": "If this is the same as the smoke detected topic, then the payload needs to indicate if smoke was detected or not."
+            }, 
+            "smokeNotDetectedPayload": {
+              "title": "Smoke Not Detected Payload",
+              "type": "string",
+              "required": false,
+              "default": "0",
+              "comment": "Optional. If a message is received on the topic then it is assumed smoke is detected."
+            },
+            "getSmokeDetectedTopic": {
+              "title": "Get Smoke Detected Topic Name.",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/getsmokedetected",
+              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+            },
+            "lowBatteryTopic": {
+              "title": "Low Battery Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/batterylow",
+              "comment": "The topic needs to be unique to this device."
+            },
+            "lowBatteryPayload": {
+              "title": "Low Battery Payload.",
+              "type": "string",
+              "required": false,
+              "default": "1",
+              "comment": "Optional. If a message is received on the topic then it is assumed battery is low."
+            },
+            "normalBatteryTopic": {
+              "title": "Normal Battery Topic Name.",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/batterylow",
+              "comment": "If this is the same as the low battery topic, then the payload needs to indicate if the battery is low."
+            },           
+            "normalBatteryPayload": {
+              "title": "Normal Battery Payload.",
+              "type": "string",
+              "required": false,
+              "default": "0",
+              "comment": "Optional. If a message is received on the topic then it is assumed battery is low."
+            },
+            "getLowBatteryTopic": {
+              "title": "Get Low Battery Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/getbatterylow",
+              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+            },
+            "tamperedTopic": {
+              "title": "Smoke Detector Tampered Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/tampered",
+              "comment": "The topic needs to be unique to this device."
+            },
+            "tamperedPayload": {
+              "title": "Smoke Detector Tampered Payload",
+              "type": "string",
+              "required": false,
+              "default": "1",
+              "comment": "Optional. If a message is received on the topic then it is assumed alarm has been tampered with."
+            },
+            "notTamperedTopic": {
+              "title": "Smoke Detector Not Tampered Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/tampered",
+              "comment": "If this is the same as the tampered topic, then the payload needs to indicate if the alarm has been tampered with or not."
+            },
+            "notTamperedPayload": {
+              "title": "Smoke Detector Not Tampered Payload",
+              "type": "string",
+              "required": false,
+              "default": "0",
+              "comment": "Optional. If a message is received on the topic then it is assumed alarm has been tampered with."
+            },
+            "getTamperedTopic": {
+              "title": "Get Tampered Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/gettampered",
+              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
+            },
+            "faultTopic": {
+              "title": "Smoke Detector Fault Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/fault",
+              "comment": "The topic needs to be unique to this device."
+            },
+            "faultPayload": {
+              "title": "Smoke Detector Fault Payload",
+              "type": "string",
+              "required": false,
+              "default": "1",
+              "comment": "Optional. If a message is received on the topic then it is assumed alarm has a fault."
+            },
+            "noFaultTopic": {
+              "title": "Smoke Detector No Fault Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/fault",
+              "comment": "If this is the same as the fault topic, then the payload needs to indicate if the alarm has a fault or not."
+            },
+            "noFaultPayload": {
+              "title": "Smoke Detector No Fault Payload",
+              "type": "string",
+              "required": false,
+              "default": "0",
+              "comment": "Optional. If a message is received on the topic then it is assumed alarm has a fault."
+            },
+            "getFaultTopic": {
+              "title": "Get Fault Topic Name",
+              "type": "string",
+              "required": true,
+              "default": "ha/smokedetector/getfault",
+              "comment": "Used to get the status proactively from the smoke alarm. Response should be sent on the topic above."
             }
           }
         }
-      },
-      "excellent": {
-        "title": "The upper value for PM2.5 air quality considered to be excellent (in micrograms per cubic metre)",
-        "type": "integer",
-        "required": true,
-        "minimum": 0,
-        "maximum": 1000,
-        "default": 10
-      },
-      "good": {
-        "title": "The upper value for PM2.5 air quality considered to be good (in micrograms per cubic metre)",
-        "type": "integer",
-        "required": true,
-        "minimum": 0,
-        "maximum": 1000,
-        "default": 20
-      },
-      "fair": {
-        "title": "The upper value for PM2.5 air quality considered to be fair (in micrograms per cubic metre)",
-        "type": "integer",
-        "required": true,
-        "minimum": 0,
-        "maximum": 1000,
-        "default": 25
-      },
-      "inferior": {
-        "title": "The upper value for PM2.5 air quality considered to be inferior (in micrograms per cubic metre)",
-        "type": "integer",
-        "required": true,
-        "minimum": 0,
-        "maximum": 1000,
-        "default": 50
-      },
-      "poor": {
-        "title": "The lowest value for PM2.5 air quality considered to be poor (in micrograms per cubic metre). Anything above this is included.",
-        "type": "integer",
-        "required": true,
-        "minimum": 0,
-        "maximum": 1000,
-        "default": 50
       }
     }
   }

@@ -1,13 +1,13 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { EnviroplusSensor } from './platformAccessory';
+import { MqttSmokeAlarmSensor as MqttSmokeAlarmSensor } from './platformAccessory';
 
 /**
  * EnviroplusPlatform
  * Here the user config is loaded and the Enviroplus accessories are created
  */
-export class EnviroplusPlatform implements DynamicPlatformPlugin {
+export class MqttSmokeAlarmPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
@@ -15,12 +15,15 @@ export class EnviroplusPlatform implements DynamicPlatformPlugin {
   public readonly accessories: PlatformAccessory[] = [];
 
   private configProvided() {
-    let provided = this.config.mqttbroker && this.config.excellent && this.config.good &&
-      this.config.fair && this.config.inferior && this.config.poor;
+    let provided = this.config.mqttbroker;
     if (this.config.devices && Array.isArray(this.config.devices) && this.config.devices.length !== 0) {
       for (const device of this.config.devices) {
         if (device) {
-          provided = provided && device.displayName && device.serial && device.topic;
+          provided = provided && device.displayName && device.manufacturer && device.model && device.serial &&
+            device.smokeDetectedTopic && device.smokeNotDetectedTopic && device.getSmokeDetectedTopic &&
+            device.lowBatteryTopic && device.normalBatteryTopic && device.getLowBatteryTopic &&
+            device.tamperedTopic && device.notTamperedTopic && device.getTamperedTopic &&
+            device.faultTopic && device.noFaultTopic && device.getFaultTopic;
         }
       }
     } else {
@@ -30,7 +33,7 @@ export class EnviroplusPlatform implements DynamicPlatformPlugin {
     return provided;
   }
 
-  private sensors: EnviroplusSensor[] = [];
+  private sensors: MqttSmokeAlarmSensor[] = [];
 
   constructor(
     public readonly log: Logger,
@@ -41,7 +44,7 @@ export class EnviroplusPlatform implements DynamicPlatformPlugin {
     // Checks whether a configuration is provided, otherwise the plugin should not be initialized
     if (!this.configProvided()) {
       log.error('Not all configuration provided!');
-      log.info('MQTT Broker for enviroment data is required along with all the enviro+ devices and their serial numbers, names and' +
+      log.info('MQTT Broker for enviroment data is required along with all the smoke alarm devices and their serial numbers, names and' +
         ' MQTT topics');
       return;
     }
@@ -99,7 +102,12 @@ export class EnviroplusPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        this.sensors.push(new EnviroplusSensor(this, existingAccessory, device.displayName, device.serial, device.topic));
+        this.sensors.push(new MqttSmokeAlarmSensor(this, existingAccessory, device.displayName, device.manufacturer, device.model,
+          device.serial, device.smokeDetectedTopic, device.smokeDetectedPayload, device.smokeNotDetectedTopic,
+          device.smokeNotDetectedPayload, device.getSmokeDetectedTopic, device.lowBatteryTopic, device.lowBatteryPayload,
+          device.normalBatteryTopic, device.normalBatteryPayload, device.getLowBatteryTopic, device.tamperedTopic, device.tamperedPayload,
+          device.notTamperedTopic, device.notTamperedPayload, device.getTamperedTopic, device.faultTopic, device.faultPayload,
+          device.noFaultTopic, device.noFaultPayload, device.getFaultTopic));
       } else {
         // the accessory does not yet exist, so we need to create it
         this.log.info('Adding new accessory:', device.displayName);
@@ -113,7 +121,12 @@ export class EnviroplusPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        this.sensors.push(new EnviroplusSensor(this, accessory, device.displayName, device.serial, device.topic));
+        this.sensors.push(new MqttSmokeAlarmSensor(this, accessory, device.displayName, device.manufacturer, device.model,
+          device.serial, device.smokeDetectedTopic, device.smokeDetectedPayload, device.smokeNotDetectedTopic,
+          device.smokeNotDetectedPayload, device.getSmokeDetectedTopic, device.lowBatteryTopic, device.lowBatteryPayload,
+          device.normalBatteryTopic, device.normalBatteryPayload, device.getLowBatteryTopic, device.tamperedTopic, device.tamperedPayload,
+          device.notTamperedTopic, device.notTamperedPayload, device.getTamperedTopic, device.faultTopic, device.faultPayload,
+          device.noFaultTopic, device.noFaultPayload, device.getFaultTopic));
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
