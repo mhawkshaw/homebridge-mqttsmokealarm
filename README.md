@@ -5,10 +5,11 @@
 
 </p>
 
-
 # MQTT Smoke Sensor Homebridge Plug-in
 
 This Homebridge plug-in allows you to connect to smoke sensors that can communicate over MQTT. For example, your smoke sensor might communicate over Zigbee or Z-Wave via a USB Stick connected to your Home Asistant installation. You could then have Home Assistant send the status updates over MQTT using an automation.
+
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
 ## Setup MQTT broker
 

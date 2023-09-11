@@ -42,6 +42,8 @@ export class MqttSmokeSensorSensor {
   };
 
   private mqttClient: Client;
+  private connectionAttempts = 1;
+  readonly MAX_CONNECTION_ATTEMPTS: number = 30;
 
   // Subscribes to the specified MQTT topic
   private subscribeMqttTopic(topicName: string) {
@@ -221,7 +223,14 @@ export class MqttSmokeSensorSensor {
     });
 
     this.mqttClient.on('error', (error) => {
-      this.platform.log.error('Problem with MQTT broker: ' + error.message);
+      if (this.connectionAttempts === 1) {
+        // First connection attempt. Notify user.
+        this.platform.log.error('Problem with MQTT broker: ' + error.message);
+      } else if (this.connectionAttempts > this.MAX_CONNECTION_ATTEMPTS) {
+        // Reset counter to inform user on next attempt.
+        this.connectionAttempts = 0;
+      }
+      this.connectionAttempts++;
     });
   }
 
