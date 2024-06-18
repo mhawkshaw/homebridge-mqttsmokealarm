@@ -2,7 +2,7 @@ import { Service, PlatformAccessory } from 'homebridge';
 
 import { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform';
 
-import { Client, connect } from 'mqtt';
+import { MqttClient, connect } from 'mqtt';
 
 /**
  * MQTT Smoke Sensor Accessory
@@ -35,13 +35,13 @@ export class MqttSmokeSensorSensor {
 
   // Use to store the sensor data for quick retrieval
   private sensorData = {
-    smokeDetected: this.platform.Characteristic.SmokeDetected.SMOKE_NOT_DETECTED,
-    batteryLow: this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
-    tampered: this.platform.Characteristic.StatusTampered.NOT_TAMPERED,
-    fault: this.platform.Characteristic.StatusFault.NO_FAULT,
+    smokeDetected: 0,
+    batteryLow: 0,
+    tampered: 0,
+    fault: 0,
   };
 
-  private mqttClient: Client;
+  private mqttClient: MqttClient;
   private connectionAttempts = 1;
   readonly MAX_CONNECTION_ATTEMPTS: number = 30;
 
@@ -54,7 +54,7 @@ export class MqttSmokeSensorSensor {
           this.platform.log.error('Unable to connect to the MQTT broker: ' + error.name + ' ' + error.message);
         } else {
           // If we're re-connecting then the existing topic subscription should still be persisted.
-          if (granted.length > 0) {
+          if (granted && granted.length > 0) {
             this.platform.log.debug(granted[0].topic + ' was subscribed');
           }
         }
