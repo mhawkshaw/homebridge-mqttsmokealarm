@@ -1,7 +1,7 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { MqttSmokeSensorSensor as MqttSmokeSensorSensor } from './platformAccessory';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
+import { MqttSmokeSensorSensor as MqttSmokeSensorSensor } from './platformAccessory.js';
 
 /**
  * MqttSmokeSensorPlatform
@@ -36,7 +36,7 @@ export class MqttSmokeSensorPlatform implements DynamicPlatformPlugin {
   private sensors: MqttSmokeSensorSensor[] = [];
 
   constructor(
-    public readonly log: Logger,
+    public readonly log: Logging,
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {

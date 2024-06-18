@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
-import { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform';
+import { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform.js';
 
 import { MqttClient, connect } from 'mqtt';
 
