@@ -1,6 +1,6 @@
-import { Service, PlatformAccessory } from 'homebridge';
+import type { Service, PlatformAccessory } from 'homebridge';
 
-import { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform.js';
+import type { MqttSmokeSensorPlatform as MqttSmokeSensorPlatform } from './platform.js';
 
 import { MqttClient, connect } from 'mqtt';
 
@@ -133,13 +133,10 @@ export class MqttSmokeSensorSensor {
     this.getFaultTopic = getFault;
 
     // set accessory information
-    const accessoryInfo: Service | undefined = this.accessory.getService(this.platform.Service.AccessoryInformation);
-
-    if (accessoryInfo !== undefined) {
-      accessoryInfo.setCharacteristic(this.platform.Characteristic.Manufacturer, manufacturer)
-        .setCharacteristic(this.platform.Characteristic.Model, model)
-        .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
-    }
+    this.accessory.getService(this.platform.Service.AccessoryInformation)!
+    .setCharacteristic(this.platform.Characteristic.Manufacturer, manufacturer)
+    .setCharacteristic(this.platform.Characteristic.Model, model)
+    .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
 
     this.smokeSensorService = this.accessory.getService(this.platform.Service.SmokeSensor) ||
       this.accessory.addService(this.platform.Service.SmokeSensor);
