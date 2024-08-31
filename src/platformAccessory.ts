@@ -134,9 +134,9 @@ export class MqttSmokeSensorSensor {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-    .setCharacteristic(this.platform.Characteristic.Manufacturer, manufacturer)
-    .setCharacteristic(this.platform.Characteristic.Model, model)
-    .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, manufacturer)
+      .setCharacteristic(this.platform.Characteristic.Model, model)
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, serial);
 
     this.smokeSensorService = this.accessory.getService(this.platform.Service.SmokeSensor) ||
       this.accessory.addService(this.platform.Service.SmokeSensor);
